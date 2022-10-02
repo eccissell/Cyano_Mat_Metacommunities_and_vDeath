@@ -1,0 +1,568 @@
+#Combined bioinformatic script for Cissell and McCoy in Review: Predation, community asynchrony, and metacommunity stability
+
+#First, we will trim the DNA reads to quality 20 and trim adapters, removing reads falling below 100bp length, using *TRIMGALORE*
+#Trim Galore version 0.6.6
+#Cutadapt version 1.18
+
+trim_galore -q 20 --gzip --length 100 -o Diel/DNA/raw_data/DAB3 --paired Diel/DNA/raw_data/DAB3/DAB3_1.fq.gz Diel/DNA/raw_data/DAB3/DAB3_2.fq.gz &&
+trim_galore -q 20 --gzip --length 100 -o Diel/DNA/raw_data/DAD2 --paired Diel/DNA/raw_data/DAD2/DAD2_1.fq.gz Diel/DNA/raw_data/DAD2/DAD2_2.fq.gz &&
+trim_galore -q 20 --gzip --length 100 -o Diel/DNA/raw_data/DAL2 --paired Diel/DNA/raw_data/DAL2/DAL2_1.fq.gz Diel/DNA/raw_data/DAL2/DAL2_2.fq.gz &&
+
+
+#Now we will do a second pass trim to get any remaining adapters using the expanded adapter database in *BBDUK*
+
+bbduk.sh in1=Diel/DNA/raw_data/DAB3/DAB3_1_val_1.fq.gz in2=Diel/DNA/raw_data/DAB3/DAB3_2_val_2.fq.gz out1=Diel/DNA/raw_data/DAB3/DAB_1_qc.fq.gz out2=Diel/DNA/raw_data/DAB3/DAB_2_qc.fq.gz ref=bbmap/bbmap/adapters.fa ktrim=r k=23 tpe tbo &&
+bbduk.sh in1=Diel/DNA/raw_data/DAD2/DAD2_1_val_1.fq.gz in2=Diel/DNA/raw_data/DAD2/DAD2_2_val_2.fq.gz out1=Diel/DNA/raw_data/DAD2/DAD_1_qc.fq.gz out2=Diel/DNA/raw_data/DAD2/DAD_2_qc.fq.gz ref=bbmap/bbmap/adapters.fa ktrim=r k=23 tpe tbo &&
+bbduk.sh in1=Diel/DNA/raw_data/DAL2/DAL2_1_val_1.fq.gz in2=Diel/DNA/raw_data/DAL2/DAL2_2_val_2.fq.gz out1=Diel/DNA/raw_data/DAL2/DAL_1_qc.fq.gz out2=Diel/DNA/raw_data/DAL2/DAL_2_qc.fq.gz ref=bbmap/bbmap/adapters.fa ktrim=r k=23 tpe tbo &&
+
+
+#Now we will remove Human DNA contamination using *Bowtie2*
+#*HG38, patch release 13 (2019/02/28), GenBank Acession#: GCA_000001405.28*
+
+bowtie2 -p 3 -x GRCh38_noalt_as -1 Diel/DNA/raw_data/DAB3/DAB_1_qc.fq.gz -2 Diel/DNA/raw_data/DAB3/DAB_2_qc.fq.gz -S Diel/DNA/raw_data/DAB3/DAB_mapped_and_unmapped.sam && samtools view -bS Diel/DNA/raw_data/DAB3/DAB_mapped_and_unmapped.sam > Diel/DNA/raw_data/DAB3/DAB_mapped_and_unmapped.bam &&
+samtools view -b -f 12 -F 256 Diel/DNA/raw_data/DAB3/DAB_mapped_and_unmapped.bam > Diel/DNA/raw_data/DAB3/DAB_bothReadsUnmapped.bam &&
+samtools sort -n -m 5G -@ 2 Diel/DNA/raw_data/DAB3/DAB_bothReadsUnmapped.bam -o Diel/DNA/raw_data/DAB3/DAB_bothReadsUnmapped_sorted.bam &&
+samtools fastq -@ 8 Diel/DNA/raw_data/DAB3/DAB_bothReadsUnmapped_sorted.bam
+    -1 Diel/DNA/raw_data/DAB3/DAB_1_final_qc.fq.gz
+    -2 Diel/DNA/raw_data/DAB3/DAB_2_final_qc.fq.gz
+    -0 /dev/null -s /dev/null -n &&
+rm -r Diel/DNA/raw_data/DAB3/*.sam &&
+rm -r Diel/DNA/raw_data/DAB3/*.bam &&
+
+bowtie2 -p 3 -x GRCh38_noalt_as -1 Diel/DNA/raw_data/DAD2/DAD_1_qc.fq.gz -2 Diel/DNA/raw_data/DAD2/DAD_2_qc.fq.gz -S Diel/DNA/raw_data/DAD2/DAD_mapped_and_unmapped.sam && samtools view -bS Diel/DNA/raw_data/DAD2/DAD_mapped_and_unmapped.sam > Diel/DNA/raw_data/DAD2/DAD_mapped_and_unmapped.bam &&
+samtools view -b -f 12 -F 256 Diel/DNA/raw_data/DAD2/DAD_mapped_and_unmapped.bam > Diel/DNA/raw_data/DAD2/DAD_bothReadsUnmapped.bam &&
+samtools sort -n -m 5G -@ 2 Diel/DNA/raw_data/DAD2/DAD_bothReadsUnmapped.bam -o Diel/DNA/raw_data/DAD2/DAD_bothReadsUnmapped_sorted.bam &&
+samtools fastq -@ 8 Diel/DNA/raw_data/DAD2/DAD_bothReadsUnmapped_sorted.bam
+    -1 Diel/DNA/raw_data/DAD2/DAD_1_final_qc.fq.gz
+    -2 Diel/DNA/raw_data/DAD2/DAD_2_final_qc.fq.gz
+    -0 /dev/null -s /dev/null -n &&
+rm -r Diel/DNA/raw_data/DAD2/*.sam &&
+rm -r Diel/DNA/raw_data/DAD2/*.bam &&
+
+bowtie2 -p 3 -x GRCh38_noalt_as -1 Diel/DNA/raw_data/DAL2/DAL_1_qc.fq.gz -2 Diel/DNA/raw_data/DAL2/DAL_2_qc.fq.gz -S Diel/DNA/raw_data/DAL2/DAL_mapped_and_unmapped.sam && samtools view -bS Diel/DNA/raw_data/DAL2/DAL_mapped_and_unmapped.sam > Diel/DNA/raw_data/DAL2/DAL_mapped_and_unmapped.bam &&
+samtools view -b -f 12 -F 256 Diel/DNA/raw_data/DAL2/DAL_mapped_and_unmapped.bam > Diel/DNA/raw_data/DAL2/DAL_bothReadsUnmapped.bam &&
+samtools sort -n -m 5G -@ 2 Diel/DNA/raw_data/DAL2/DAL_bothReadsUnmapped.bam -o Diel/DNA/raw_data/DAL2/DAL_bothReadsUnmapped_sorted.bam &&
+samtools fastq -@ 8 Diel/DNA/raw_data/DAL2/DAL_bothReadsUnmapped_sorted.bam
+    -1 Diel/DNA/raw_data/DAL2/DAL_1_final_qc.fq.gz
+    -2 Diel/DNA/raw_data/DAL2/DAL_2_final_qc.fq.gz
+    -0 /dev/null -s /dev/null -n &&
+rm -r Diel/DNA/raw_data/DAL2/*.sam &&
+rm -r Diel/DNA/raw_data/DAL2/*.bam &&
+
+#Now we will perform one final hard length filtering at 100bp using bbduk just to make sure we remove all short reads.
+
+bbduk.sh in1=Diel/DNA/raw_data/DAB3/DAB_1_final_qc.fastq.gz in2=Diel/DNA/raw_data/DAB3/DAB_2_final_qc.fastq.gz out1=Diel/DNA/raw_data/DAB3/DAB_1_fin_qc.fq.gz out2=Diel/DNA/raw_data/DAB3/DAB_2_fin_qc.fq.gz minlen=100 &&
+bbduk.sh in1=Diel/DNA/raw_data/DAD2/DAD_1_final_qc.fq.gz in2=Diel/DNA/raw_data/DAD2/DAD_2_final_qc.fq.gz out1=Diel/DNA/raw_data/DAD2/DAD_1_fin_qc.fq.gz out2=Diel/DNA/raw_data/DAD2/DAD_2_fin_qc.fq.gz minlen=100 &&
+bbduk.sh in1=Diel/DNA/raw_data/DAL2/DAL_1_final_qc.fq.gz in2=Diel/DNA/raw_data/DAL2/DAL_2_final_qc.fq.gz out1=Diel/DNA/raw_data/DAL2/DAL_1_fin_qc.fq.gz out2=Diel/DNA/raw_data/DAL2/DAL_2_fin_qc.fq.gz minlen=100 &&
+
+#Now we will look at our quality using FASTQC
+
+fastqc Diel/DNA/raw_data/DAB3/DAB_1_fin_qc.fq.gz Diel/DNA/raw_data/DAB3/DAB_2_fin_qc.fq.gz -t 3 &&
+fastqc Diel/DNA/raw_data/DAD2/DAD_1_fin_qc.fq.gz Diel/DNA/raw_data/DAD2/DAD_2_fin_qc.fq.gz -t 3 &&
+fastqc Diel/DNA/raw_data/DAL2/DAL_1_fin_qc.fq.gz Diel/DNA/raw_data/DAL2/DAL_2_fin_qc.fq.gz -t 3
+
+#Now we will use Nonpareil 3 version 3.304 to look at coverage and diversity
+
+pigz -d Diel/DNA/raw_data/DAB3/DAB_1_fin_qc.fq.gz -p 3 &&
+nonpareil -s Diel/DNA/raw_data/DAB3/DAB_1_fin_qc.fq -T kmer -f fastq -b Diel/DNA/raw_data/DAB3/nonparDAB -X 10000 -t 3 -n 1024 -k 31 -R 2048 &&
+pigz Diel/DNA/raw_data/DAB3/DAB_1_fin_qc.fq -p 3 &&
+pigz -d Diel/DNA/raw_data/DAD2/DAD_1_fin_qc.fq.gz -p 3 &&
+nonpareil -s Diel/DNA/raw_data/DAD2/DAD_1_fin_qc.fq -T kmer -f fastq -b Diel/DNA/raw_data/DAD2/nonparDAD -X 10000 -t 3 -n 1024 -k 31 -R 2048 &&
+pigz Diel/DNA/raw_data/DAD2/DAD_1_fin_qc.fq -p 3 &&
+pigz -d Diel/DNA/raw_data/DAL2/DAL_1_fin_qc.fq.gz -p 3 &&
+nonpareil -s Diel/DNA/raw_data/DAL2/DAL_1_fin_qc.fq -T kmer -f fastq -b Diel/DNA/raw_data/DAL2/nonparDAL -X 10000 -t 3 -n 1024 -k 31 -R 2048 &&
+pigz Diel/DNA/raw_data/DAL2/DAL_1_fin_qc.fq -p 3 &&
+
+##############################################
+#########
+##Assemble with IDBA-UD
+#########
+##############################################
+#Try IDBA-UD
+#First we have to get fastq in interleaved fasta
+pigz -d -p 32 Diel/DNA/raw_data/DAL2/*.fq.gz &&
+pigz -d -p 32 Diel/DNA/raw_data/DAB3/*.fq.gz &&
+pigz -d -p 32 Diel/DNA/raw_data/DAD2/*.fq.gz
+IDBA/idba/bin/fq2fa --merge --filter Diel/DNA/raw_data/DAL2/DAL_1_fin_qc.fq Diel/DNA/raw_data/DAL2/DAL_2_fin_qc.fq Diel/DNA/raw_data/DAL2/DALmerge_idba.fa &&
+IDBA/idba/bin/fq2fa --merge --filter Diel/DNA/raw_data/DAB3/DAB_1_fin_qc.fq Diel/DNA/raw_data/DAB3/DAB_2_fin_qc.fq Diel/DNA/raw_data/DAB3/DABmerge_idba.fa &&
+IDBA/idba/bin/fq2fa --merge --filter Diel/DNA/raw_data/DAD2/DAD_1_fin_qc.fq Diel/DNA/raw_data/DAD2/DAD_2_fin_qc.fq Diel/DNA/raw_data/DAD2/DADmerge_idba.fa
+IDBA/idba/bin/idba_ud -r Diel/DNA/raw_data/DAL2/DALmerge_idba.fa -o MEGAHIT/DA/IDBA/DAL --mink 21  --maxk 121 --step 20 --min_contig 1500 --num_threads 32 &&
+IDBA/idba/bin/idba_ud -r Diel/DNA/raw_data/DAB3/DABmerge_idba.fa -o MEGAHIT/DA/IDBA/DAB --mink 21  --maxk 121 --step 20 --min_contig 1500 --num_threads 32 &&
+IDBA/idba/bin/idba_ud -r Diel/DNA/raw_data/DAD2/DADmerge_idba.fa -o MEGAHIT/DA/IDBA/DAD --mink 21  --maxk 121 --step 20 --min_contig 1500 --num_threads 32
+
+#QUAST assemblies
+quast -o MEGAHIT/DA/IDBA/DAL/QUAST -t 32 MEGAHIT/DA/IDBA/DAL/DAL_scaffold.fa &&
+quast -o MEGAHIT/DA/IDBA/DAB/QUAST -t 32 MEGAHIT/DA/IDBA/DAB/DAB_scaffold.fa &&
+quast -o MEGAHIT/DA/IDBA/DAD/QUAST -t 32 MEGAHIT/DA/IDBA/DAD/DAD_scaffold.fa
+
+#Get names into scaffolds
+sed 's/scaffold/DAD/g' DAD_scaffold.fa > DAD_scaffold_simple.fa
+sed 's/scaffold/DAB/g' DAB_scaffold.fa > DAB_scaffold_simple.fa
+sed 's/scaffold/DAL/g' DAL_scaffold.fa > DAL_scaffold_simple.fa
+
+#####Get read mapping profiles for binning
+#Build bowtie index
+bowtie2-build MEGAHIT/DA/IDBA/DAL/DAL_scaffold_simple.fa MEGAHIT/DA/IDBA/DAL/DALassembly -f &&
+bowtie2-build MEGAHIT/DA/IDBA/DAB/DAB_scaffold_simple.fa MEGAHIT/DA/IDBA/DAB/DABassembly -f &&
+bowtie2-build MEGAHIT/DA/IDBA/DAD/DAD_scaffold_simple.fa MEGAHIT/DA/IDBA/DAD/DADassembly -f
+
+#Map DNA against assembly
+bowtie2 -x MEGAHIT/DA/IDBA/DAL/DALassembly -1 Diel/DNA/raw_data/DAL2/DAL_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAL2/DAL_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/DAL/DAL_DAL.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/DAL/DAL_DAL.sam > MEGAHIT/DA/IDBA/DAL/DAL_DAL.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/DAL/DAL_DAL.bam -o MEGAHIT/DA/IDBA/DAL/DAL_DAL_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/DAL/DAL_DAL_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/DAL/DAL_DAL.sam &&
+rm MEGAHIT/DA/IDBA/DAL/DAL_DAL.bam &&
+pigz MEGAHIT/DA/IDBA/DAL/DAL_DAL_sort.bam -p 32 &&
+bowtie2 -x MEGAHIT/DA/IDBA/DAL/DALassembly -1 Diel/DNA/raw_data/DAD2/DAD_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAD2/DAD_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/DAL/DAD_DAL.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/DAL/DAD_DAL.sam > MEGAHIT/DA/IDBA/DAL/DAD_DAL.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/DAL/DAD_DAL.bam -o MEGAHIT/DA/IDBA/DAL/DAD_DAL_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/DAL/DAD_DAL_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/DAL/DAD_DAL.sam &&
+rm MEGAHIT/DA/IDBA/DAL/DAD_DAL.bam &&
+bowtie2 -x MEGAHIT/DA/IDBA/DAL/DALassembly -1 Diel/DNA/raw_data/DAB3/DAB_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAB3/DAB_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/DAL/DAB_DAL.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/DAL/DAB_DAL.sam > MEGAHIT/DA/IDBA/DAL/DAB_DAL.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/DAL/DAB_DAL.bam -o MEGAHIT/DA/IDBA/DAL/DAB_DAL_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/DAL/DAB_DAL_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/DAL/DAB_DAL.sam &&
+rm MEGAHIT/DA/IDBA/DAL/DAB_DAL.bam &&
+bowtie2 -x MEGAHIT/DA/IDBA/DAB/DABassembly -1 Diel/DNA/raw_data/DAL2/DAL_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAL2/DAL_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/DAB/DAL_DAB.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/DAB/DAL_DAB.sam > MEGAHIT/DA/IDBA/DAB/DAL_DAB.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/DAB/DAL_DAB.bam -o MEGAHIT/DA/IDBA/DAB/DAL_DAB_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/DAB/DAL_DAB_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/DAB/DAL_DAB.sam &&
+rm MEGAHIT/DA/IDBA/DAB/DAL_DAB.bam &&
+bowtie2 -x MEGAHIT/DA/IDBA/DAB/DABassembly -1 Diel/DNA/raw_data/DAD2/DAD_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAD2/DAD_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/DAB/DAD_DAB.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/DAB/DAD_DAB.sam > MEGAHIT/DA/IDBA/DAB/DAD_DAB.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/DAB/DAD_DAB.bam -o MEGAHIT/DA/IDBA/DAB/DAD_DAB_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/DAB/DAD_DAB_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/DAB/DAD_DAB.sam &&
+rm MEGAHIT/DA/IDBA/DAB/DAD_DAB.bam &&
+bowtie2 -x MEGAHIT/DA/IDBA/DAB/DABassembly -1 Diel/DNA/raw_data/DAB3/DAB_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAB3/DAB_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/DAB/DAB_DAB.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/DAB/DAB_DAB.sam > MEGAHIT/DA/IDBA/DAB/DAB_DAB.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/DAB/DAB_DAB.bam -o MEGAHIT/DA/IDBA/DAB/DAB_DAB_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/DAB/DAB_DAB_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/DAB/DAB_DAB.sam &&
+rm MEGAHIT/DA/IDBA/DAB/DAB_DAB.bam &&
+bowtie2 -x MEGAHIT/DA/IDBA/DAD/DADassembly -1 Diel/DNA/raw_data/DAL2/DAL_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAL2/DAL_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/DAD/DAL_DAD.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/DAD/DAL_DAD.sam > MEGAHIT/DA/IDBA/DAD/DAL_DAD.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/DAD/DAL_DAD.bam -o MEGAHIT/DA/IDBA/DAD/DAL_DAD_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/DAD/DAL_DAD_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/DAD/DAL_DAD.sam &&
+rm MEGAHIT/DA/IDBA/DAD/DAL_DAD.bam &&
+bowtie2 -x MEGAHIT/DA/IDBA/DAD/DADassembly -1 Diel/DNA/raw_data/DAD2/DAD_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAD2/DAD_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/DAD/DAD_DAD.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/DAD/DAD_DAD.sam > MEGAHIT/DA/IDBA/DAD/DAD_DAD.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/DAD/DAD_DAD.bam -o MEGAHIT/DA/IDBA/DAD/DAD_DAD_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/DAD/DAD_DAD_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/DAD/DAD_DAD.sam &&
+rm MEGAHIT/DA/IDBA/DAD/DAD_DAD.bam &&
+bowtie2 -x MEGAHIT/DA/IDBA/DAD/DADassembly -1 Diel/DNA/raw_data/DAB3/DAB_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAB3/DAB_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/DAD/DAB_DAD.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/DAD/DAB_DAD.sam > MEGAHIT/DA/IDBA/DAD/DAB_DAD.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/DAD/DAB_DAD.bam -o MEGAHIT/DA/IDBA/DAD/DAB_DAD_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/DAD/DAB_DAD_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/DAD/DAB_DAD.sam &&
+rm MEGAHIT/DA/IDBA/DAD/DAB_DAD.bam
+
+###Now begin BINNING
+#First bin with Metabat2 ver 2.15
+pigz -d MEGAHIT/DA/IDBA/DA?/*.bam.gz -p 32
+jgi_summarize_bam_contig_depths --outputDepth MEGAHIT/DA/IDBA/DAL/DAL_depth.txt MEGAHIT/DA/IDBA/DAL/*.bam &&
+jgi_summarize_bam_contig_depths --outputDepth MEGAHIT/DA/IDBA/DAB/DAB_depth.txt MEGAHIT/DA/IDBA/DAB/*.bam &&
+jgi_summarize_bam_contig_depths --outputDepth MEGAHIT/DA/IDBA/DAD/DAD_depth.txt MEGAHIT/DA/IDBA/DAD/*.bam
+
+metabat2 -m 1500 -v -t 30 -i MEGAHIT/DA/IDBA/DAL/DAL_scaffold_simple.fa -a MEGAHIT/DA/IDBA/DAL/DAL_depth.txt -o MEGAHIT/DA/IDBA/DAL/METABAT/DAL_metabat &&
+metabat2 -m 1500 -v -t 30 -i MEGAHIT/DA/IDBA/DAB/DAB_scaffold_simple.fa -a MEGAHIT/DA/IDBA/DAB/DAB_depth.txt -o MEGAHIT/DA/IDBA/DAB/METABAT/DAB_metabat &&
+metabat2 -m 1500 -v -t 30 -i MEGAHIT/DA/IDBA/DAD/DAD_scaffold_simple.fa -a MEGAHIT/DA/IDBA/DAD/DAD_depth.txt -o MEGAHIT/DA/IDBA/DAD/METABAT/DAD_metabat
+
+#Now we will bin with Maxbin2 ver. 2.2.7
+run_MaxBin.pl -min_contig_length 1500 -thread 32 -contig MEGAHIT/DA/IDBA/DAL/DAL_scaffold_simple.fa -out MEGAHIT/DA/IDBA/DAL/MAXBIN/DAL_MAXBIN -abund MEGAHIT/DA/IDBA/DAL/DAL_depth.txt &&
+run_MaxBin.pl -min_contig_length 1500 -thread 32 -contig MEGAHIT/DA/IDBA/DAB/DAB_scaffold_simple.fa -out MEGAHIT/DA/IDBA/DAB/MAXBIN/DAB_MAXBIN -abund MEGAHIT/DA/IDBA/DAB/DAB_depth.txt &&
+run_MaxBin.pl -min_contig_length 1500 -thread 32 -contig MEGAHIT/DA/IDBA/DAD/DAD_scaffold_simple.fa -out MEGAHIT/DA/IDBA/DAD/MAXBIN/DAD_MAXBIN -abund MEGAHIT/DA/IDBA/DAD/DAD_depth.txt
+
+#Binning with Vamb
+vamb --outdir MEGAHIT/DA/IDBA/DAL/VAMB --fasta MEGAHIT/DA/IDBA/DAL/DAL_scaffold_simple.fa --jgi MEGAHIT/DA/IDBA/DAL/DAL_depth.txt --minfasta 200000 &&
+vamb --outdir MEGAHIT/DA/IDBA/DAB/VAMB --fasta MEGAHIT/DA/IDBA/DAB/DAB_scaffold_simple.fa --jgi MEGAHIT/DA/IDBA/DAB/DAB_depth.txt --minfasta 200000 &&
+vamb --outdir MEGAHIT/DA/IDBA/DAD/VAMB --fasta MEGAHIT/DA/IDBA/DAD/DAD_scaffold_simple.fa --jgi MEGAHIT/DA/IDBA/DAD/DAD_depth.txt --minfasta 200000
+
+#Rename VAMB output (navigate [cd] to vamb bins and run)
+for i in *; do mv "$i" VAMB_"$i"; done
+
+#We will obtain a concensus bin set with DAS_Tool. First we have to convert the output of the bins to a format that DASTool likes.
+mkdir MEGAHIT/DA/DASTOOL/ &&
+Fasta_to_Scaffolds2Bin.sh -e fasta -i MEGAHIT/DA/IDBA/DAL/MAXBIN/ > MEGAHIT/DA/IDBA/DAL/DASTOOL/maxbin2bin.tsv &&
+Fasta_to_Scaffolds2Bin.sh -e fa -i MEGAHIT/DA/IDBA/DAL/METABAT/ > MEGAHIT/DA/IDBA/DAL/DASTOOL/metabat2bin.tsv &&
+Fasta_to_Scaffolds2Bin.sh -e fna -i MEGAHIT/DA/IDBA/DAL/VAMB/VAMB_bins > MEGAHIT/DA/IDBA/DAL/DASTOOL/vamb2bin.tsv &&
+Fasta_to_Scaffolds2Bin.sh -e fasta -i MEGAHIT/DA/IDBA/DAB/MAXBIN/ > MEGAHIT/DA/IDBA/DAB/DASTOOL/maxbin2bin.tsv &&
+Fasta_to_Scaffolds2Bin.sh -e fa -i MEGAHIT/DA/IDBA/DAB/METABAT/ > MEGAHIT/DA/IDBA/DAB/DASTOOL/metabat2bin.tsv &&
+Fasta_to_Scaffolds2Bin.sh -e fna -i MEGAHIT/DA/IDBA/DAB/VAMB/VAMB_bins > MEGAHIT/DA/IDBA/DAB/DASTOOL/vamb2bin.tsv &&
+Fasta_to_Scaffolds2Bin.sh -e fasta -i MEGAHIT/DA/IDBA/DAD/MAXBIN/ > MEGAHIT/DA/IDBA/DAD/DASTOOL/maxbin2bin.tsv &&
+Fasta_to_Scaffolds2Bin.sh -e fa -i MEGAHIT/DA/IDBA/DAD/METABAT/ > MEGAHIT/DA/IDBA/DAD/DASTOOL/metabat2bin.tsv &&
+Fasta_to_Scaffolds2Bin.sh -e fna -i MEGAHIT/DA/IDBA/DAD/VAMB/VAMB_bins > MEGAHIT/DA/IDBA/DAD/DASTOOL/vamb2bin.tsv
+
+
+#Now run DASTool
+DAS_Tool -i MEGAHIT/DA/IDBA/DAL/DASTOOL/metabat2bin.tsv,MEGAHIT/DA/IDBA/DAL/DASTOOL/maxbin2bin.tsv,MEGAHIT/DA/IDBA/DAL/DASTOOL/vamb2bin.tsv -l metabat,maxbin,vamb -c MEGAHIT/DA/IDBA/DAL/DAL_scaffold_simple.fa -o MEGAHIT/DA/IDBA/DAL/DASTOOL/DAL --threads 40 --search_engine diamond --write_bins --write_unbinned --score_threshold 0.5 &&
+DAS_Tool -i MEGAHIT/DA/IDBA/DAB/DASTOOL/metabat2bin.tsv,MEGAHIT/DA/IDBA/DAB/DASTOOL/maxbin2bin.tsv,MEGAHIT/DA/IDBA/DAB/DASTOOL/vamb2bin.tsv -l metabat,maxbin,vamb -c MEGAHIT/DA/IDBA/DAB/DAB_scaffold_simple.fa -o MEGAHIT/DA/IDBA/DAB/DASTOOL/DAB --threads 40 --search_engine diamond --write_bins --write_unbinned --score_threshold 0.5 &&
+DAS_Tool -i MEGAHIT/DA/IDBA/DAD/DASTOOL/metabat2bin.tsv,MEGAHIT/DA/IDBA/DAD/DASTOOL/maxbin2bin.tsv,MEGAHIT/DA/IDBA/DAD/DASTOOL/vamb2bin.tsv -l metabat,maxbin,vamb -c MEGAHIT/DA/IDBA/DAD/DAD_scaffold_simple.fa -o MEGAHIT/DA/IDBA/DAD/DASTOOL/DAD --threads 40 --search_engine diamond --write_bins --write_unbinned --score_threshold 0.5
+
+#Dereplicate at 95% identity across all using dRep ver. 3.2.0
+dRep dereplicate MEGAHIT/DA/IDBA/DREP/ -p 36 -g MEGAHIT/DA/IDBA/DREP/All/*.fa -comp 50 -con 10 --checkM_method lineage_wf -pa 0.85 -sa 0.90
+
+#Classifiy with GTDB to pull cyanos
+gtdbtk classify_wf --genome_dir MEGAHIT/DA/IDBA/DREP/dereplicated_genomes --out_dir MEGAHIT/DA/IDBA/DREP/GTDBTK --prefix GTD_DACombined --cpus 36 --extension fa #DAl_metabat.7
+
+#Manually curate Cyanobacterial genomes with Anvio
+#Step One: Generate Contig Database
+```r
+anvi-gen-contigs-database -f MEGAHIT/DA/IDBA/DAL/DAL_scaffold_simple.fa -o MEGAHIT/DA/IDBA/DAL/contigs.db -n 'DAL scaff database' --num-threads 16 &&
+anvi-gen-contigs-database -f MEGAHIT/DA/IDBA/DAB/DAB_scaffold_simple.fa -o MEGAHIT/DA/IDBA/DAB/contigs.db -n 'DAB scaff database' --num-threads 16 &&
+anvi-gen-contigs-database -f MEGAHIT/DA/IDBA/DAD/DAD_scaffold_simple.fa -o MEGAHIT/DA/IDBA/DAD/contigs.db -n 'DAD scaff database' --num-threads 16 &&
+anvi-run-hmms -c MEGAHIT/DA/IDBA/DAL/contigs.db -T 16 &&
+anvi-run-hmms -c MEGAHIT/DA/IDBA/DAB/contigs.db -T 16 &&
+anvi-run-hmms -c MEGAHIT/DA/IDBA/DAD/contigs.db -T 16
+
+
+#Step Two: Create Profile Databases for each BAM file separately
+anvi-profile -i MEGAHIT/DA/IDBA/DAL/DAL_DAL_sort.bam -c MEGAHIT/DA/IDBA/DAL/contigs.db --num-threads 16 --min-contig-length 1500 --output-dir MEGAHIT/DA/IDBA/DAL/DAL_profile.db --skip-SNV-profiling --sample-name DAL &&
+anvi-profile -i MEGAHIT/DA/IDBA/DAL/DAB_DAL_sort.bam -c MEGAHIT/DA/IDBA/DAL/contigs.db --num-threads 16 --min-contig-length 1500 --output-dir MEGAHIT/DA/IDBA/DAL/DAB_profile.db --skip-SNV-profiling --sample-name DAB &&
+anvi-profile -i MEGAHIT/DA/IDBA/DAL/DAD_DAL_sort.bam -c MEGAHIT/DA/IDBA/DAL/contigs.db --num-threads 16 --min-contig-length 1500 --output-dir MEGAHIT/DA/IDBA/DAL/DAD_profile.db --skip-SNV-profiling --sample-name DAD &&
+anvi-profile -i MEGAHIT/DA/IDBA/DAB/DAL_DAB_sort.bam -c MEGAHIT/DA/IDBA/DAB/contigs.db --num-threads 16 --min-contig-length 1500 --output-dir MEGAHIT/DA/IDBA/DAB/DAL_profile.db --skip-SNV-profiling --sample-name DAL &&
+anvi-profile -i MEGAHIT/DA/IDBA/DAB/DAB_DAB_sort.bam -c MEGAHIT/DA/IDBA/DAB/contigs.db --num-threads 16 --min-contig-length 1500 --output-dir MEGAHIT/DA/IDBA/DAB/DAB_profile.db --skip-SNV-profiling --sample-name DAB &&
+anvi-profile -i MEGAHIT/DA/IDBA/DAB/DAD_DAB_sort.bam -c MEGAHIT/DA/IDBA/DAB/contigs.db --num-threads 16 --min-contig-length 1500 --output-dir MEGAHIT/DA/IDBA/DAB/DAD_profile.db --skip-SNV-profiling --sample-name DAD &&
+anvi-profile -i MEGAHIT/DA/IDBA/DAD/DAL_DAD_sort.bam -c MEGAHIT/DA/IDBA/DAD/contigs.db --num-threads 16 --min-contig-length 1500 --output-dir MEGAHIT/DA/IDBA/DAD/DAL_profile.db --skip-SNV-profiling --sample-name DAL &&
+anvi-profile -i MEGAHIT/DA/IDBA/DAD/DAB_DAD_sort.bam -c MEGAHIT/DA/IDBA/DAD/contigs.db --num-threads 16 --min-contig-length 1500 --output-dir MEGAHIT/DA/IDBA/DAD/DAB_profile.db --skip-SNV-profiling --sample-name DAB &&
+anvi-profile -i MEGAHIT/DA/IDBA/DAD/DAD_DAD_sort.bam -c MEGAHIT/DA/IDBA/DAD/contigs.db --num-threads 16 --min-contig-length 1500 --output-dir MEGAHIT/DA/IDBA/DAD/DAD_profile.db --skip-SNV-profiling --sample-name DAD
+
+#STEP Three: Merge BAM profiles within assembly
+anvi-merge MEGAHIT/DA/IDBA/DAL/DA?_profile.db/PROFILE.db -o MEGAHIT/DA/IDBA/DAL/DAL_merged_prof.db -c MEGAHIT/DA/IDBA/DAL/contigs.db -S DAL_Merged &&
+anvi-merge MEGAHIT/DA/IDBA/DAB/DA?_profile.db/PROFILE.db -o MEGAHIT/DA/IDBA/DAB/DAB_merged_prof.db -c MEGAHIT/DA/IDBA/DAB/contigs.db -S DAB_Merged &&
+anvi-merge MEGAHIT/DA/IDBA/DAD/DA?_profile.db/PROFILE.db -o MEGAHIT/DA/IDBA/DAD/DAD_merged_prof.db -c MEGAHIT/DA/IDBA/DAD/contigs.db -S DAD_Merged
+
+#Simplify bin names (for Anvio) using custom sed scripts
+sed s/[.]/_/ MEGAHIT/DA/IDBA/DAL/DASTOOL/DAL_DASTool_scaffolds2bin.txt > MEGAHIT/DA/IDBA/DAL/DASTOOL/DAL_DASTool_scaffolds2bin2.txt &&
+sed s/[.]/_/ MEGAHIT/DA/IDBA/DAB/DASTOOL/DAB_DASTool_scaffolds2bin.txt > MEGAHIT/DA/IDBA/DAB/DASTOOL/DAB_DASTool_scaffolds2bin2.txt &&
+sed s/[.]/_/ MEGAHIT/DA/IDBA/DAD/DASTOOL/DAD_DASTool_scaffolds2bin.txt > MEGAHIT/DA/IDBA/DAD/DASTOOL/DAD_DASTool_scaffolds2bin2.txt
+
+#STEP Four: Import bins into collection
+
+anvi-import-collection MEGAHIT/DA/IDBA/DAL/DASTOOL/DAL_DASTool_scaffolds2bin2.txt -p MEGAHIT/DA/IDBA/DAL/DAL_merged_prof.db/PROFILE.db -c MEGAHIT/DA/IDBA/DAL/contigs.db --contigs-mode -C DAL &&
+anvi-import-collection MEGAHIT/DA/IDBA/DAB/DASTOOL/DAB_DASTool_scaffolds2bin2.txt -p MEGAHIT/DA/IDBA/DAB/DAB_merged_prof.db/PROFILE.db -c MEGAHIT/DA/IDBA/DAB/contigs.db --contigs-mode -C DAB &&
+anvi-import-collection MEGAHIT/DA/IDBA/DAD/DASTOOL/DAD_DASTool_scaffolds2bin2.txt -p MEGAHIT/DA/IDBA/DAD/DAD_merged_prof.db/PROFILE.db -c MEGAHIT/DA/IDBA/DAD/contigs.db --contigs-mode -C DAD
+
+#STEP Five: Visualize total profile (You will have to do this on a separate browser by using local host ip)
+
+anvi-interactive -p MEGAHIT/DA/IDBA/DAL/DAL_merged_prof.db/PROFILE.db -c MEGAHIT/DA/IDBA/DAL/contigs.db -C DAL
+
+anvi-refine -p MEGAHIT/DA/IDBA/DAL/DAL_merged_prof.db/PROFILE.db -c MEGAHIT/DA/IDBA/DAL/contigs.db -C DAL -b DAL_metabat_7
+#Now DAL_metabat_7_1
+
+anvi-interactive -p MEGAHIT/DA/IDBA/DAB/DAB_merged_prof.db/PROFILE.db -c MEGAHIT/DA/IDBA/DAB/contigs.db -C DAB
+
+anvi-refine -p MEGAHIT/DA/IDBA/DAB/DAB_merged_prof.db/PROFILE.db -c MEGAHIT/DA/IDBA/DAB/contigs.db -C DAB -b DAB_metabat_2
+#Now DAB_metabat_2_1
+
+anvi-interactive -p MEGAHIT/DA/IDBA/DAD/DAD_merged_prof.db/PROFILE.db -c MEGAHIT/DA/IDBA/DAD/contigs.db -C DAD
+
+#None retained from DAD were cyanos
+
+#STEP Seven: Export MAGs as FASTA
+anvi-summarize -p MEGAHIT/DA/IDBA/DAL/DAL_merged_prof.db/PROFILE.db -c MEGAHIT/DA/IDBA/DAL/contigs.db -C DAL -o MEGAHIT/DA/IDBA/DAL/ANVIO/BINS &&
+anvi-summarize -p MEGAHIT/DA/IDBA/DAB/DAB_merged_prof.db/PROFILE.db -c MEGAHIT/DA/IDBA/DAB/contigs.db -C DAB -o MEGAHIT/DA/IDBA/DAB/ANVIO/BINS
+
+#MAG comparisons
+fastANI -r MEGAHIT/D1/ANVIO/fasta/D1_MAG_00014-contigs.fa -q MEGAHIT/DA/IDBA/DAL/ANVIO/BINS/bin_by_bin/DAL_metabat_7_1/DAL_metabat_7_1-contigs.fa -t 5 -o Cyano_ANI_DAL_D1 --fragLen 1000
+
+fastANI -r MEGAHIT/DA/IDBA/DAB/ANVIO/BINS/bin_by_bin/DAB_metabat_2_1/DAB_metabat_2_1-contigs.fa -q MEGAHIT/DA/IDBA/DAL/ANVIO/BINS/bin_by_bin/DAL_metabat_7_1/DAL_metabat_7_1-contigs.fa -t 5 -o Cyano_ANI_DAB_DAD --fragLen 1000
+
+fastANI -r MEGAHIT/D1/ANVIO/fasta/D1_MAG_00014-contigs.fa -q MEGAHIT/DA/IDBA/DAB/ANVIO/BINS/bin_by_bin/DAB_metabat_2_1/DAB_metabat_2_1-contigs.fa -t 5 -o Cyano_ANI_DAB_D1 --fragLen 1000
+
+#Pull 16s regions using checkM.
+checkm ssu_finder MEGAHIT/DA/IDBA/DAL/ANVIO/BINS/bin_by_bin/DAL_metabat_7_1/DAL_metabat_7_1-contigs.fa MEGAHIT/DA/IDBA/DAL/ANVIO/BINS/bin_by_bin/DAL_metabat_7_1/ DALmet7 -x fa &&
+checkm ssu_finder MEGAHIT/DA/IDBA/DAB/ANVIO/BINS/bin_by_bin/DAB_metabat_2_1/DAB_metabat_2_1-contigs.fa MEGAHIT/DA/IDBA/DAB/ANVIO/BINS/bin_by_bin/DAB_metabat_2_1/ DABmet2 -x fa
+#No go - oh well
+#Create full genome tree with SANSSERIF instead using 84 full genomes of Cyano pulled from NCBI
+#Create .txt file by pipe ls to cat
+ls | cat > list.txt
+#Now run SANS Serif ver. 2.1_09A
+cd CURATED_DIEL_VIRUSES/CYANOPHAGE_PHYLOGENOMICS/FASTA_EXPAND
+/home/mccoylab/SANSSERIF/sans/SANS -i /home/mccoylab/NCBI_FULL_CYANO_GENOMES/list.txt -N /home/mccoylab/DA_SANSSERIF/DASANSSERIF31split.new -f strict -M 86 -k 31 -t 31
+
+
+###Virsorter2
+#Cat 3 IDBA assemblies together
+cat MEGAHIT/DA/IDBA/DAL/DAL_scaffold_simple.fa MEGAHIT/DA/IDBA/DAB/DAB_scaffold_simple.fa MEGAHIT/DA/IDBA/DAD/DAD_scaffold_simple.fa > MEGAHIT/DA/IDBA/VIRSORTER/cat_DAscaf.fa
+
+#RUN VIRSORTER PASS 1
+virsorter run --keep-original-seq -i MEGAHIT/DA/IDBA/VIRSORTER/cat_DAscaf.fa -w MEGAHIT/DA/IDBA/VIRSORTER/vs2pass1 --include-groups dsDNAphage,ssDNA --min-length 2500 --min-score 0.5 -j 25 all
+
+#RUN CHECKV ON DNA
+checkv end_to_end MEGAHIT/DA/IDBA/VIRSORTER/vs2pass1/final-viral-combined.fa MEGAHIT/DA/IDBA/VIRSORTER/checkv -t 28 -d checkv-db-v1.0
+cat MEGAHIT/DA/IDBA/VIRSORTER/checkv/proviruses.fna MEGAHIT/DA/IDBA/VIRSORTER/checkv/viruses.fna > MEGAHIT/DA/IDBA/VIRSORTER/checkv/combined.fna
+
+#RUN VIRSORTER TO PREP FOR DRAM ON DNA
+virsorter run --seqname-suffix-off --viral-gene-enrich-off --provirus-off --prep-for-dramv -i MEGAHIT/DA/IDBA/VIRSORTER/checkv/combined.fna -w MEGAHIT/DA/IDBA/VIRSORTER/vs_pass2 --include-groups dsDNAphage,ssDNA --min-length 500 --min-score 0.5 -j 28 all
+
+#RUN DRAM ON DNA
+DRAM-v.py annotate -i MEGAHIT/DA/IDBA/VIRSORTER/vs_pass2/for-dramv/final-viral-combined-for-dramv.fa -v MEGAHIT/DA/IDBA/VIRSORTER/vs_pass2/for-dramv/viral-affi-contigs-for-dramv.tab -o MEGAHIT/DA/IDBA/VIRSORTER/DRAMVrun2 --skip_trnascan --threads 28 --min_contig_size 1000
+#Stopped at DAL_6616__full-cat_1, run again (RUN2)
+
+#Manual curation of viruses was performed in R SEE R SCRIPT FOR CURATION
+#Following manual curation, cat all fastas and subset by list of curated phages from R
+####SED SCRIPTS FOR WEIRD DEFLINE ISSUE I WAS FACING
+sed 's/||.*/||/' MEGAHIT/DA/IDBA/VIRSORTER/vs_pass2/final-viral-combined.fa > MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/DA_simp_combined.fa
+##Overall
+python seq_filter_by_id/tools/seq_filter_by_id/seq_filter_by_id.py -i MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/DA_simp_combined.fa -f fasta -p MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/curated_viruses.fa -n MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/removed_viruses.fa MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/deathcurated_ids.tsv 1
+
+#Now CLUSTER at 95%
+cd-hit-est -i MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/curated_viruses.fa -o MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/DA_dedup_curated_viruses.fa -c 0.95
+##811 clusters from 848 inputs
+
+#Build bowtie index of viral genomes
+bowtie2-build MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/DA_dedup_curated_viruses.fa MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DA_vir -f
+#MAP
+bowtie2 -x MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DA_vir -1 Diel/DNA/raw_data/DAL2/DAL_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAL2/DAL_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAL.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAL.sam > MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAL.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAL.bam -o MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAL_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAL_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAL.sam &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAL.bam &&
+pigz MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAL_sort.bam -p 32 &&
+bowtie2 -x MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DA_vir -1 Diel/DNA/raw_data/DAD2/DAD_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAD2/DAD_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAD.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAD.sam > MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAD.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAD.bam -o MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAD_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAD_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAD.sam &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAD.bam &&
+pigz MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAD_sort.bam -p 32 &&
+bowtie2 -x MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DA_vir -1 Diel/DNA/raw_data/DAB3/DAB_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAB3/DAB_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAB.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAB.sam > MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAB.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAB.bam -o MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAB_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAB_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAB.sam &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAB.bam &&
+pigz MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DAB_sort.bam -p 32
+
+#Coverm for phage abundances (TPM)
+
+#Count
+coverm contig --bam-files MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DA?_sort.bam -m count -t 5 -o MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DA_phage_counts.tsv &&
+#Length
+coverm contig --bam-files MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DA?_sort.bam -m length -t 5 -o MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BOWTIE/DA_phage_length.tsv
+
+###Link up with cyano hosts
+###########Host prediction using multiple computational strategies
+#####
+#First CRISPR Matching
+#MINCED ver 0.4.2 for CRISPR spacer annotation on prok genomes to assign host-phage pairs
+mkdir MEGAHIT/DA/IDBA/VIRSORTER/CRISPR &&
+cd MEGAHIT/DA/IDBA/DAL/ANVIO/both &&
+for FILE in *.fa; do minced -spacers -gffFull $FILE ${FILE%%.fa}.gff ${FILE%%.fa}.txt; done &&
+cd&&
+mv MEGAHIT/DA/IDBA/DAL/ANVIO/both/*_spacers.fa MEGAHIT/DA/IDBA/VIRSORTER/CRISPR/ &&
+mv MEGAHIT/DA/IDBA/DAL/ANVIO/both/*.txt MEGAHIT/DA/IDBA/VIRSORTER/CRISPR/ &&
+mv MEGAHIT/DA/IDBA/DAL/ANVIO/both/*.gff MEGAHIT/DA/IDBA/VIRSORTER/CRISPR/ &&
+
+#We need to append the MAG identity to the deflines of the spacer fasta before cat
+cd MEGAHIT/DA/IDBA/VIRSORTER/CRISPR &&
+for FILE in *.fa; do
+b="${FILE%.fa}"
+sed -i "s/>D1/>$b/" "$FILE"; done
+cd
+
+#Now we cat
+cat MEGAHIT/DA/IDBA/VIRSORTER/CRISPR/*.fa > MEGAHIT/DA/IDBA/VIRSORTER/CRISPR/DA_spacers.fa &&
+
+#Now make those DB
+makeblastdb -in MEGAHIT/DA/IDBA/VIRSORTER/CRISPR/DA_spacers.fa -parse_seqids -dbtype nucl -out MEGAHIT/DA/IDBA/VIRSORTER/CRISPR/spacer.db &&
+
+#Time to blast
+blastn -db MEGAHIT/DA/IDBA/VIRSORTER/CRISPR/spacer.db -query MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/DA_dedup_curated_viruses.fa -out MEGAHIT/DA/IDBA/VIRSORTER/CRISPR/DA_blast_spacer.txt -outfmt 6 -word_size 7 -task blastn-short -gapopen 10 -gapextend 2 -penalty -1 -max_target_seqs 5
+
+####SECOND PHIST (k-mer or oligonucleotide based)
+#Use PHIST to also ID virus-host pairs; it requires the viruses to each be separate fastas; time to split
+#cd into dierctory then,
+#1:first step to spilt into each file
+cat *.fa |\
+awk '/^>/ {if(N>0) printf("\n"); printf("%s\n",$0);++N;next;} { printf("%s",$0);} END {printf("\n");}' |\
+split -l 2  - OTU
+#2:second step to add extension
+for file in OTU*
+do
+ mv "$file" "$file.fasta"
+done
+#3:third step to change the file name to the header name
+for i in *.fasta; do
+mv $i $(head -1 $i | cut -f1 -d ' ' | tr -d '>' ).fasta
+done
+
+#Change files in genomes to have fasta extension
+#cd into directory
+for FILE in *.fa
+do
+mv -- "$FILE" "${FILE%.fa}.fasta"
+done
+
+#Now we use PHIST
+python3 PHIST/phist.py -t 20 MEGAHIT/DA/IDBA/VIRSORTER/PHIST/viruses/ MEGAHIT/DA/IDBA/DAL/ANVIO/both/ MEGAHIT/DA/IDBA/VIRSORTER/PHIST/common_kmers.csv MEGAHIT/DA/IDBA/VIRSORTER/PHIST/predictions.csv
+
+##########
+#Finally use BLASTn to get raw nucleotide identity matches for 3rd phage-host match data
+#First make blastdb of viral contigs
+
+makeblastdb -in MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/DA_dedup_curated_viruses.fa -parse_seqids -dbtype nucl -out MEGAHIT/DA/IDBA/VIRSORTER/BLAST/phages.db
+
+#Then, blast MAGs against viral contigs
+blastn -db MEGAHIT/DA/IDBA/VIRSORTER/BLAST/phages.db -query MEGAHIT/DA/IDBA/DAL/ANVIO/both/DA_cMAG_cat.fa -out MEGAHIT/DA/IDBA/VIRSORTER/BLAST/DAL_blast_nt_id.txt -perc_identity 75 -evalue 0.001 -num_threads 10 -max_target_seqs 5 -outfmt 6
+
+#Integrate results in R scripts
+
+####Get cMAG abundances
+#Build bowtie index of Cyano genomes
+bowtie2-build MEGAHIT/DA/IDBA/DAL/ANVIO/both/DA_cMAG_cat.fa MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DA_MAG -f
+#MAP
+bowtie2 -x MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DA_MAG -1 Diel/DNA/raw_data/DAL2/DAL_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAL2/DAL_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAL.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAL.sam > MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAL.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAL.bam -o MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAL_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAL_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAL.sam &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAL.bam &&
+pigz MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAL_sort.bam -p 32 &&
+bowtie2 -x MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DA_MAG -1 Diel/DNA/raw_data/DAD2/DAD_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAD2/DAD_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAD.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAD.sam > MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAD.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAD.bam -o MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAD_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAD_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAD.sam &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAD.bam &&
+pigz MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAD_sort.bam -p 32 &&
+bowtie2 -x MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DA_MAG -1 Diel/DNA/raw_data/DAB3/DAB_1_fin_qc.fq.gz -2 Diel/DNA/raw_data/DAB3/DAB_2_fin_qc.fq.gz -S MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAB.sam -p 32 --no-unal &&
+samtools view -S -b MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAB.sam > MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAB.bam -@ 32 &&
+samtools sort MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAB.bam -o MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAB_sort.bam -@ 32 &&
+samtools index MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAB_sort.bam -@ 32 &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAB.sam &&
+rm MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAB.bam &&
+pigz MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DAB_sort.bam -p 32
+
+#Coverm for genome abundances (TPM)
+
+coverm genome --bam-files MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/DA?_sort.bam --genome-fasta-directory MEGAHIT/DA/IDBA/DAL/ANVIO/both/ -x fa -m count,length -t 5 -o MEGAHIT/DA/IDBA/VIRSORTER/MAG/BOWTIE/genome_tpm.tsv
+
+
+
+**Dying Mats RNA**
+
+**QUALITY CONTROL**
+First, we will trim the RNA reads to quality 20 and trim adapters, removing reads below 50bp length, using *TRIMGALORE*
+Trim Galore version 0.6.6
+Cutadapt version 1.18
+IMPORTANT NOTE: Do everything that will take longer than you want to stay on a computer on a screen (screen -S <name> to start a screen; screen -r <name> to resume that screen). Our servers are weird and even if you put the task in the background with &, it will still cancel when you terminate your connection to the server, but not on a screen.
+```r
+trim_galore -q 20 --gzip --length 50 -o Diel/RNA/raw_data/RAB --paired Diel/RNA/raw_data/RAB/RAB_1.fq.gz Diel/RNA/raw_data/RAB/RAB_2.fq.gz &
+trim_galore -q 20 --gzip --length 50 -o Diel/RNA/raw_data/RAD --paired Diel/RNA/raw_data/RAD/RAD_1.fq.gz Diel/RNA/raw_data/RAD/RAD_2.fq.gz &
+trim_galore -q 20 --gzip --length 50 -o Diel/RNA/raw_data/RB --paired Diel/RNA/raw_data/RB/RB_1.fq.gz Diel/RNA/raw_data/RB/RB_2.fq.gz
+```
+
+Run SortMeRNA on the samples with very few cores so I can still do stuff elsewhere
+```r
+pigz -d -p 6 Diel/RNA/raw_data/RAB/RAB_1_val_1.fq.gz &&
+pigz -d -p 6 Diel/RNA/raw_data/RAB/RAB_2_val_2.fq.gz &&
+sortmerna -workdir Diel/RNA/raw_data/RAB -reads Diel/RNA/raw_data/RAB/RAB_1_val_1.fq -reads Diel/RNA/raw_data/RAB/RAB_2_val_2.fq -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-16s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-16s-id90.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-18s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-28s-id98.fasta --other Diel/RNA/raw_data/RAB/RAB_cleaned --threads 6 --fastx --out2 --paired_in -m 200 -v &&
+pigz -p 6 Diel/RNA/raw_data/RAB/RAB_1_val_1.fq &&
+pigz -p 6 Diel/RNA/raw_data/RAB/RAB_2_val_2.fq &&
+pigz -p 6 Diel/RNA/raw_data/RAB/RAB_cleaned_fwd.fq &&
+pigz -p 6 Diel/RNA/raw_data/RAB/RAB_cleaned_rev.fq &&
+pigz -p 6 Diel/RNA/raw_data/RAB/aligned_fwd.fq &&
+pigz -p 6 Diel/RNA/raw_data/RAB/aligned_rev.fq &&
+pigz -d -p 6 Diel/RNA/raw_data/RB/RB_1_val_1.fq.gz &&
+pigz -d -p 6 Diel/RNA/raw_data/RB/RB_2_val_2.fq.gz &&
+sortmerna -workdir Diel/RNA/raw_data/RB -reads Diel/RNA/raw_data/RB/RB_1_val_1.fq -reads Diel/RNA/raw_data/RB/RB_2_val_2.fq -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-16s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-16s-id90.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-18s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-28s-id98.fasta --other Diel/RNA/raw_data/RB/RB_cleaned --threads 6 --fastx --out2 --paired_in -m 200 -v &&
+pigz -p 6 Diel/RNA/raw_data/RB/RB_1_val_1.fq &&
+pigz -p 6 Diel/RNA/raw_data/RB/RB_2_val_2.fq &&
+pigz -p 6 Diel/RNA/raw_data/RB/RB_cleaned_fwd.fq &&
+pigz -p 6 Diel/RNA/raw_data/RB/RB_cleaned_rev.fq &&
+pigz -p 6 Diel/RNA/raw_data/RB/aligned_fwd.fq &&
+pigz -p 6 Diel/RNA/raw_data/RB/aligned_rev.fq &&
+pigz -d -p 6 Diel/RNA/raw_data/RAD/RAD_1_val_1.fq.gz &&
+pigz -d -p 6 Diel/RNA/raw_data/RAD/RAD_2_val_2.fq.gz &&
+sortmerna -workdir Diel/RNA/raw_data/RAD -reads Diel/RNA/raw_data/RAD/RAD_1_val_1.fq -reads Diel/RNA/raw_data/RAD/RAD_2_val_2.fq -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-16s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-16s-id90.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-18s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-28s-id98.fasta --other Diel/RNA/raw_data/RAD/RAD_cleaned --threads 6 --fastx --out2 --paired_in -m 200 -v &&
+pigz -p 6 Diel/RNA/raw_data/RAD/RAD_1_val_1.fq &&
+pigz -p 6 Diel/RNA/raw_data/RAD/RAD_2_val_2.fq &&
+pigz -p 6 Diel/RNA/raw_data/RAD/RAD_cleaned_fwd.fq &&
+pigz -p 6 Diel/RNA/raw_data/RAD/RAD_cleaned_rev.fq &&
+pigz -p 6 Diel/RNA/raw_data/RAD/aligned_fwd.fq &&
+pigz -p 6 Diel/RNA/raw_data/RAD/aligned_rev.fq &&
+pigz -d -p 6 Diel/RNA/raw_data/RAD/RAD_1_val_1.fq.gz &&
+pigz -d -p 6 Diel/RNA/raw_data/RAD/RAD_2_val_2.fq.gz
+```
+#This keeps failing, try splitting into multiple smaller Files
+#464051308 is thirds
+split -l 464051308 RAD_1_val_1.fq RAD_1_split
+split -l 464051308 RAD_2_val_2.fq RAD_2_split
+#Now run on the splits and cat later
+sortmerna -workdir Diel/RNA/raw_data/RAD/SplitAA -reads Diel/RNA/raw_data/RAD/RAD_1_splitaa.fq -reads Diel/RNA/raw_data/RAD/RAD_2_splitaa.fq -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-16s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-16s-id90.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-18s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-28s-id98.fasta --other Diel/RNA/raw_data/RAD/SplitAA/RAD_split1_cleaned --threads 6 --fastx --out2 --paired_in -m 200 -v &&
+sortmerna -workdir Diel/RNA/raw_data/RAD/SplitAB -reads Diel/RNA/raw_data/RAD/RAD_1_splitab.fq -reads Diel/RNA/raw_data/RAD/RAD_2_splitab.fq -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-16s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-16s-id90.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-18s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-28s-id98.fasta --other Diel/RNA/raw_data/RAD/SplitAB/RAD_split2_cleaned --threads 6 --fastx --out2 --paired_in -m 200 -v &&
+sortmerna -workdir Diel/RNA/raw_data/RAD/SplitAC -reads Diel/RNA/raw_data/RAD/RAD_1_splitac.fq -reads Diel/RNA/raw_data/RAD/RAD_2_splitac.fq -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-16s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-16s-id90.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-arc-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-bac-23s-id98.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-18s-id95.fasta -ref sortmerna_db/sortmerna_db/rRNA_databases/silva-euk-28s-id98.fasta --other Diel/RNA/raw_data/RAD/SplitAC/RAD_split3_cleaned --threads 6 --fastx --out2 --paired_in -m 200 -v
+
+#Cat together splits
+cat Diel/RNA/raw_data/RAD/SplitAA/RAD_split1_cleaned_fwd.fq Diel/RNA/raw_data/RAD/SplitAB/RAD_split2_cleaned_fwd.fq Diel/RNA/raw_data/RAD/SplitAC/RAD_split3_cleaned_fwd.fq > Diel/RNA/raw_data/RAD/RAD_cleaned_fwd.fq &&
+cat Diel/RNA/raw_data/RAD/SplitAA/RAD_split1_cleaned_rev.fq Diel/RNA/raw_data/RAD/SplitAB/RAD_split2_cleaned_rev.fq Diel/RNA/raw_data/RAD/SplitAC/RAD_split3_cleaned_rev.fq > Diel/RNA/raw_data/RAD/RAD_cleaned_rev.fq
+
+#Run FastQC on the outputs
+fastqc Diel/RNA/raw_data/RAB/RAB_cleaned_fwd.fq.gz Diel/RNA/raw_data/RAB/RAB_cleaned_rev.fq.gz -t 3 &&
+fastqc Diel/RNA/raw_data/RB/RB_cleaned_fwd.fq.gz Diel/RNA/raw_data/RB/RB_cleaned_rev.fq.gz -t 3 &&
+fastqc Diel/RNA/raw_data/RAD/RAD_cleaned_fwd.fq Diel/RNA/raw_data/RAD/RAD_cleaned_rev.fq -t 3
+
+#Map to phages and cyanoMAGs using BWA-MEM
+
+#First lets get ORFs on viral sequences for length normalization
+mkdir MEGAHIT/DA/IDBA/VIRSORTER/DRAMV_RUN_AFTER_CURATION_FOR_BWA
+DRAM-v.py annotate -i MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/DA_dedup_curated_viruses.fa -o MEGAHIT/DA/IDBA/VIRSORTER/DRAMV_RUN_AFTER_CURATION_FOR_BWA/death_virus --skip_trnascan --threads 28 --min_contig_size 500
+
+#We need to run cMAGs through DRAM so that we can easily normalize length (CPM) to summed ORF and not total length
+#We can also look at broad transcription patterns here of potential metabolic switching...
+#DRAM for annotating CMAG
+#First generate the annotations
+DRAM.py annotate -i 'MEGAHIT/DA/IDBA/DAL/ANVIO/both/*.fa' -o MEGAHIT/DA/IDBA/DAL/ANVIO/both/uniDRAM/ --min_contig_size 1500 --threads 36 --verbose --use_uniref
+#Next we distill (summarize) the annotations
+DRAM.py distill -i MEGAHIT/DA/IDBA/DAL/ANVIO/both/uniDRAM/annotations.tsv -o MEGAHIT/DA/IDBA/DAL/ANVIO/both/uniDRAM/DISTILL --trna_path MEGAHIT/DA/IDBA/DAL/ANVIO/both/uniDRAM/trnas.tsv
+
+#Build directory from BWA index
+mkdir MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA
+mkdir MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/MAG
+bwa index -p MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/MAG/cMAG MEGAHIT/DA/IDBA/DAL/ANVIO/both/uniDRAM/scaffolds.fna
+
+#Align RNA against cMAGs
+cd Diel/RNA/raw_data/RNA_Death_Combined
+for i in RA?_cleaned_fwd.fq.gz
+do
+echo $i
+echo ${i%_fwd.fq.gz}_rev.fq.gz
+bwa mem -t 36 /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/MAG/cMAG $i ${i%_fwd.fq.gz}_rev.fq.gz | samtools view -@ 36 -S -b -F 4 -o /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/MAG/${i%_cleaned_fwd.fq.gz}.bam &&
+samtools sort /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/MAG/${i%_cleaned_fwd.fq.gz}.bam -o /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/MAG/${i%_cleaned_fwd.fq.gz}_sort.bam -@ 32
+samtools index /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/MAG/${i%_cleaned_fwd.fq.gz}_sort.bam -@ 32
+rm /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/MAG/${i%_cleaned_fwd.fq.gz}.bam
+pigz /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/MAG/${i%_cleaned_fwd.fq.gz}_sort.bam -p 32
+done
+
+#Use featureCounts ver. 2.0.1 to extract counts per gene region on MAGs
+featureCounts -a MEGAHIT/DA/IDBA/DAL/ANVIO/both/uniDRAM/genes.gff -o MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/MAG/DeathMAGs_RNA_counts.tsv MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/MAG/*.bam -T 20 -F GFF -t CDS -g ID -p
+
+#Phages
+#Build directory from BWA index
+mkdir MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA
+mkdir MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/VIRUS
+bwa index -p MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/VIRUS/death_virus MEGAHIT/DA/IDBA/VIRSORTER/DRAMV_RUN_AFTER_CURATION_FOR_BWA/death_virus/scaffolds.fna
+
+#Align RNA against curated_viruses
+cd Diel/RNA/raw_data/RNA_Death_Combined
+for i in RA?_cleaned_fwd.fq.gz
+do
+echo $i
+echo ${i%_fwd.fq.gz}_rev.fq.gz
+bwa mem -t 36 /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/VIRUS/death_virus $i ${i%_fwd.fq.gz}_rev.fq.gz | samtools view -@ 36 -S -b -F 4 -o /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/VIRUS/${i%_cleaned_fwd.fq.gz}.bam &&
+samtools sort /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/VIRUS/${i%_cleaned_fwd.fq.gz}.bam -o /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/VIRUS/${i%_cleaned_fwd.fq.gz}_sort.bam -@ 32
+samtools index /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/VIRUS/${i%_cleaned_fwd.fq.gz}_sort.bam -@ 32
+rm /home/mccoylab/MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/VIRUS/${i%_cleaned_fwd.fq.gz}.bam
+done
+
+#Use featureCounts to extract RNA counts per gene region on phages
+featureCounts -a MEGAHIT/DA/IDBA/VIRSORTER/DRAMV_RUN_AFTER_CURATION_FOR_BWA/death_virus/genes.gff -o MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/VIRUS/death_virus_counts.tsv MEGAHIT/DA/IDBA/VIRSORTER/SCREENING/BWA/VIRUS/*sort.bam -T 20 -F GFF -t CDS -g ID -p
