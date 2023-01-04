@@ -1,4 +1,4 @@
-#Combined Script for the analyses presented in Cissell and McCoy In Review 
+#Combined Script for the analyses presented for both Cissell and McCoy In Review manuscripts detailed in this repo
 #Load libraries
 require(plyr)
 library(gtools)
