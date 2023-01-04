@@ -14,4 +14,4 @@ Data files include:
 - Survival data from the field coring experiment (.csv)
 - Fish foraging data (.csv)
 - Model output dataframe (.csv; Please email Ethan [ecissell@unc.edu] for access due to large file size preventing upload)
-- The vDeath database - a curated database of viral sequences recovered from a dying cyanobacterial mat (.fasta and .faa). 
+- The vDeath database - a curated database of viral sequences recovered from a dying cyanobacterial mat (.fasta, .faa, .genes). 
