@@ -15,4 +15,4 @@ Data files include:
 - Fish foraging data (.csv)
 - Model output dataframe (.csv; Please email Ethan [ecissell@unc.edu] for access due to large file size preventing upload)
 - The vDeath database - a curated database of viral sequences recovered from a dying cyanobacterial mat (.fasta, .faa, .genes). 
-- Viral abundances of every recovered vOTU across the sampled decaying cyanobacterial mat (.csv)
+- Abundances (as TPM normalized counts) of every recovered vOTU across the sampled decaying cyanobacterial mat (.csv)
