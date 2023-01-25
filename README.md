@@ -1,7 +1,7 @@
 # Cyanobacterial Mat Metacommunities and vDeath Database
 Code and data files for Cissell and McCoy In Review: Predation, community asynchrony, and metacommunity stability in cyanobacterial mats (Preprint Available Here: https://www.biorxiv.org/content/10.1101/2022.10.07.511315v2) and Cissell and McCoy In Review: Viral association with cyanoabcterial mat community mortality. 
 
-Data are currently provided as private for peer review only. Please email Ethan (ecissell@unc.edu) for permissions to use data and/or code prior to acceptance of the manuscript for publication.
+Data are currently provided as private for peer review only. Please email Ethan (ecissell@unc.edu) for permissions to use data and/or code prior to acceptance of the manuscripts for publication.
 
 Code files include:
 - A combined R script used in the statistical analysis of all data and for generating plots (.R)
