@@ -1,6 +1,8 @@
 # Cyanobacterial Mat Metacommunities and vDeath Database <a href="https://zenodo.org/badge/latestdoi/542609534"><img src="https://zenodo.org/badge/542609534.svg" alt="DOI"></a>
 
-Code and data files for Cissell and McCoy In Review: Predation, community asynchrony, and metacommunity stability in cyanobacterial mats (Preprint Available Here: https://www.biorxiv.org/content/10.1101/2022.10.07.511315v2) 
+Code and data files for:
+
+Cissell EC, McCoy SJ. In Review. Predation, community asynchrony, and metacommunity stability in cyanobacterial mats (Preprint Available Here: https://www.biorxiv.org/content/10.1101/2022.10.07.511315v2) 
 
 and 
 
