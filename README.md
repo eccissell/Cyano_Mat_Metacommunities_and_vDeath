@@ -8,7 +8,7 @@ Data are currently provided as private for peer review only. Please email Ethan 
 Code files include:
 - A combined R script used in the statistical analysis of all data and for generating plots (.R)
 - The code for the bioinformatic analysis of the viral data (.txt)
-- The code for the metacommunity cellular automaton model (.C)
+- The code for the metacommunity cellular automaton models (.C)
 
 
 Data files include:
